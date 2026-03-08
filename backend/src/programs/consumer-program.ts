@@ -12,6 +12,7 @@ import {
   decodeHeartbeatKey,
   EMPTY_HEARTBEAT_GROUP_FILTERS,
   encodeHeartbeatKey,
+  encodeHeartbeatGroupQueryKey,
   HEARTBEAT_GROUP_DIMENSIONS,
   HEARTBEAT_STALE_AFTER_MS,
   isHeartbeatHealthy,
@@ -616,7 +617,7 @@ const rpcServerLayer = (
               topic: config.topic,
               groupBy: query.groupBy,
               childGroupBy: query.childGroupBy,
-              filters: JSON.stringify(query.filters),
+              queryKey: encodeHeartbeatGroupQueryKey(query),
               activeSubscriptions: runtimeStatus.activeSubscriptions
             });
 
