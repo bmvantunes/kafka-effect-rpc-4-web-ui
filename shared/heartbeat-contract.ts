@@ -39,6 +39,34 @@ export const HeartbeatPayload = Schema.Struct({
 export type HeartbeatPayload = Schema.Schema.Type<typeof HeartbeatPayload>;
 
 export const HEARTBEAT_STALE_AFTER_MS = 10_000;
+const HEARTBEAT_KEY_VERSION = "heartbeat.v1";
+const HEARTBEAT_QUERY_KEY_VERSION = "heartbeat-query.v1";
+
+const encodeKeyPart = (name: string, value: string): string =>
+  `${name}=${encodeURIComponent(value)}`;
+
+const decodeKeyPart = (
+  segment: string,
+  expectedName: string
+): string => {
+  const prefix = `${expectedName}=`;
+
+  if (!segment.startsWith(prefix)) {
+    throw new Error(`heartbeat key segment ${expectedName} is missing`);
+  }
+
+  return decodeURIComponent(segment.slice(prefix.length));
+};
+
+const normalizeFilterValues = (
+  values: ReadonlyArray<string> | null
+): ReadonlyArray<string> | null => {
+  if (values === null || values.length === 0) {
+    return null;
+  }
+
+  return [...new Set(values)].sort((left, right) => left.localeCompare(right));
+};
 
 export const isHeartbeatHealthy = (
   timestamp: number,
@@ -46,15 +74,38 @@ export const isHeartbeatHealthy = (
 ): boolean => Number.isFinite(timestamp) && now - timestamp <= HEARTBEAT_STALE_AFTER_MS;
 
 export const encodeHeartbeatKey = (identity: HeartbeatIdentity): string =>
-  JSON.stringify(identity);
+  [
+    HEARTBEAT_KEY_VERSION,
+    encodeKeyPart("region", identity.region),
+    encodeKeyPart("system", identity.system),
+    encodeKeyPart("appName", identity.appName),
+    encodeKeyPart("hostname", identity.hostname),
+    encodeKeyPart("processName", identity.processName)
+  ].join("|");
 
 export const decodeHeartbeatKey = (raw: unknown): HeartbeatIdentity => {
   if (typeof raw !== "string" || raw.length === 0) {
     throw new Error("heartbeat key must be a non-empty string");
   }
 
-  const parsed = JSON.parse(raw) as unknown;
-  return Schema.decodeUnknownSync(HeartbeatIdentity)(parsed);
+  if (raw.startsWith("{")) {
+    const parsed = JSON.parse(raw) as unknown;
+    return Schema.decodeUnknownSync(HeartbeatIdentity)(parsed);
+  }
+
+  const parts = raw.split("|");
+
+  if (parts.length !== 6 || parts[0] !== HEARTBEAT_KEY_VERSION) {
+    throw new Error("heartbeat key has invalid format");
+  }
+
+  return {
+    region: decodeKeyPart(parts[1]!, "region"),
+    system: decodeKeyPart(parts[2]!, "system"),
+    appName: decodeKeyPart(parts[3]!, "appName"),
+    hostname: decodeKeyPart(parts[4]!, "hostname"),
+    processName: decodeKeyPart(parts[5]!, "processName")
+  };
 };
 
 export const HeartbeatGroupFiltersSchema = Schema.Struct({
@@ -80,6 +131,35 @@ export const HeartbeatGroupQuerySchema = Schema.Struct({
   childGroupBy: Schema.NullOr(HeartbeatGroupDimensionSchema)
 });
 export type HeartbeatGroupQuery = Schema.Schema.Type<typeof HeartbeatGroupQuerySchema>;
+
+export const encodeHeartbeatGroupQueryKey = (
+  query: HeartbeatGroupQuery
+): string =>
+  [
+    HEARTBEAT_QUERY_KEY_VERSION,
+    encodeKeyPart("groupBy", query.groupBy),
+    encodeKeyPart("childGroupBy", query.childGroupBy ?? "*"),
+    encodeKeyPart(
+      "region",
+      normalizeFilterValues(query.filters.region)?.join(",") ?? "*"
+    ),
+    encodeKeyPart(
+      "system",
+      normalizeFilterValues(query.filters.system)?.join(",") ?? "*"
+    ),
+    encodeKeyPart(
+      "appName",
+      normalizeFilterValues(query.filters.appName)?.join(",") ?? "*"
+    ),
+    encodeKeyPart(
+      "hostname",
+      normalizeFilterValues(query.filters.hostname)?.join(",") ?? "*"
+    ),
+    encodeKeyPart(
+      "processName",
+      normalizeFilterValues(query.filters.processName)?.join(",") ?? "*"
+    )
+  ].join("|");
 
 export const HeartbeatGroupChildSchema = Schema.Struct({
   key: Schema.String,
