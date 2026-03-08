@@ -1,10 +1,14 @@
 import { Effect, Layer, ServiceMap } from "effect";
 import { KafkaProducerError, inferInfraReason } from "../errors/kafka-errors";
 import { KafkaClientFactory } from "./kafka-client-factory-service";
-import { KafkaTelemetryService } from "./kafka-telemetry-service";
 
 export interface KafkaProducerServiceShape {
-  readonly send: (topic: string, sequence: number, payload: string) => Effect.Effect<void, KafkaProducerError>;
+  readonly send: (
+    topic: string,
+    key: string,
+    sequence: number,
+    payload: string
+  ) => Effect.Effect<void, KafkaProducerError>;
 }
 
 export class KafkaProducerService extends ServiceMap.Service<KafkaProducerService, KafkaProducerServiceShape>()(
@@ -14,10 +18,9 @@ export class KafkaProducerService extends ServiceMap.Service<KafkaProducerServic
     KafkaProducerService,
     Effect.gen(function* () {
       const clients = yield* KafkaClientFactory;
-      const telemetry = yield* KafkaTelemetryService;
       const producer = yield* clients.producer;
 
-      const send: KafkaProducerServiceShape["send"] = (topic, sequence, payload) =>
+      const send: KafkaProducerServiceShape["send"] = (topic, key, sequence, payload) =>
         Effect.tryPromise({
           try: () =>
             producer.send({
@@ -25,7 +28,7 @@ export class KafkaProducerService extends ServiceMap.Service<KafkaProducerServic
               messages: [
                 {
                   topic,
-                  key: `event-${sequence}`,
+                  key,
                   value: payload
                 }
               ]
@@ -45,15 +48,10 @@ export class KafkaProducerService extends ServiceMap.Service<KafkaProducerServic
           Effect.withSpan("kafka.producer.send", {
             attributes: {
               topic,
+              key,
               sequence
             }
-          }),
-          Effect.tap(() => telemetry.recordProduced),
-          Effect.tapError(() =>
-            telemetry.recordProducerError.pipe(
-              Effect.flatMap(() => telemetry.recordErrorType("KafkaProducerError"))
-            )
-          )
+          })
         );
 
       return {

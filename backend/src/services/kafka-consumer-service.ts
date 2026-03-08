@@ -2,7 +2,6 @@ import { Effect, Layer, Option, Scope, ServiceMap, Stream } from "effect";
 import { KafkaConsumerError, inferInfraReason } from "../errors/kafka-errors";
 import { KafkaClientFactory } from "./kafka-client-factory-service";
 import type { KafkaMessageEnvelope, KafkaMessagesStream } from "./kafka-client-types";
-import { KafkaTelemetryService, type KafkaTelemetryServiceShape } from "./kafka-telemetry-service";
 
 export interface KafkaConsumerServiceShape {
   readonly consumeTopic: (topic: string) => Effect.Effect<void, KafkaConsumerError, Scope.Scope>;
@@ -45,8 +44,7 @@ const closeStreamWithLogs = (stream: KafkaMessagesStream, topic: string) =>
 
 const runMessageStream = (
   stream: KafkaMessagesStream,
-  topic: string,
-  telemetry: KafkaTelemetryServiceShape
+  topic: string
 ): Effect.Effect<never, KafkaConsumerError> =>
   Stream.fromAsyncIterable(
     stream,
@@ -61,9 +59,7 @@ const runMessageStream = (
       })
   ).pipe(
     Stream.tap((message) =>
-      telemetry.recordConsumed.pipe(
-        Effect.flatMap(() => Effect.logInfo("kafka message consumed", renderMessage(message)))
-      )
+      Effect.logInfo("kafka message consumed", renderMessage(message))
     ),
     Stream.runDrain,
     Effect.withSpan("kafka.consumer.streamLoop", {
@@ -89,7 +85,6 @@ export class KafkaConsumerService extends ServiceMap.Service<KafkaConsumerServic
     KafkaConsumerService,
     Effect.gen(function* () {
       const clients = yield* KafkaClientFactory;
-      const telemetry = yield* KafkaTelemetryService;
       const consumer = yield* clients.consumer;
 
       const consumeTopic: KafkaConsumerServiceShape["consumeTopic"] = (topic) =>
@@ -115,14 +110,9 @@ export class KafkaConsumerService extends ServiceMap.Service<KafkaConsumerServic
             (messages) => closeStreamWithLogs(messages, topic)
           );
 
-          yield* runMessageStream(stream, topic, telemetry);
+          yield* runMessageStream(stream, topic);
         }).pipe(
-          Effect.withSpan("kafka.consumer.consumeTopic", { attributes: { topic } }),
-          Effect.tapError(() =>
-            telemetry.recordConsumerError.pipe(
-              Effect.flatMap(() => telemetry.recordErrorType("KafkaConsumerError"))
-            )
-          )
+          Effect.withSpan("kafka.consumer.consumeTopic", { attributes: { topic } })
         );
 
       return {

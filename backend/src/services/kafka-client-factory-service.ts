@@ -56,8 +56,8 @@ const mapMessage = (message: {
   topic: message.topic,
   partition: message.partition,
   offset: message.offset,
-  key: String(message.key),
-  value: String(message.value)
+  key: message.key === null || message.key === undefined ? null : String(message.key),
+  value: message.value === null || message.value === undefined ? null : String(message.value)
 });
 
 class PlatformaticMessagesStream implements KafkaMessagesStream {

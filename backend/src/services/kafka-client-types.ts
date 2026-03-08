@@ -2,8 +2,8 @@ export interface KafkaMessageEnvelope {
   readonly topic: string;
   readonly partition: number;
   readonly offset: bigint;
-  readonly key: string;
-  readonly value: string;
+  readonly key: string | null;
+  readonly value: string | null;
 }
 
 export interface KafkaMessagesStream extends AsyncIterable<KafkaMessageEnvelope> {

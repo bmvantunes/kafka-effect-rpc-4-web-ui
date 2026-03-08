@@ -2,7 +2,6 @@ import { Effect, Layer, ServiceMap } from "effect";
 import { KafkaAdminError, inferInfraReason } from "../errors/kafka-errors";
 import { KafkaConfig } from "../config/kafka-config";
 import { KafkaClientFactory } from "./kafka-client-factory-service";
-import { KafkaTelemetryService } from "./kafka-telemetry-service";
 
 export interface KafkaAdminServiceShape {
   readonly ensureTopic: (topic?: string) => Effect.Effect<void, KafkaAdminError>;
@@ -16,7 +15,6 @@ export class KafkaAdminService extends ServiceMap.Service<KafkaAdminService, Kaf
     Effect.gen(function* () {
       const config = yield* KafkaConfig;
       const clients = yield* KafkaClientFactory;
-      const telemetry = yield* KafkaTelemetryService;
       const admin = yield* clients.admin;
 
       const listTopics = Effect.tryPromise({
@@ -29,13 +27,7 @@ export class KafkaAdminService extends ServiceMap.Service<KafkaAdminService, Kaf
             retryable: true,
             cause
           })
-      }).pipe(
-        Effect.tapError(() =>
-          telemetry.recordAdminError.pipe(
-            Effect.flatMap(() => telemetry.recordErrorType("KafkaAdminError"))
-          )
-        )
-      );
+      });
 
       const ensureTopic = (topic = config.topic) =>
         Effect.gen(function* () {
@@ -60,13 +52,7 @@ export class KafkaAdminService extends ServiceMap.Service<KafkaAdminService, Kaf
                 retryable: true,
                 cause
               })
-          }).pipe(
-            Effect.tapError(() =>
-              telemetry.recordAdminError.pipe(
-                Effect.flatMap(() => telemetry.recordErrorType("KafkaAdminError"))
-              )
-            )
-          );
+          });
 
           yield* create.pipe(
             Effect.catch((error) =>

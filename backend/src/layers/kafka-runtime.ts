@@ -5,8 +5,6 @@ import { KafkaAdminService } from "../services/kafka-admin-service";
 import { KafkaClientFactory } from "../services/kafka-client-factory-service";
 import { KafkaConsumerService } from "../services/kafka-consumer-service";
 import { KafkaProducerService } from "../services/kafka-producer-service";
-import { KafkaTelemetryExporter } from "../services/kafka-telemetry-exporter-service";
-import { KafkaTelemetryService } from "../services/kafka-telemetry-service";
 
 export function provideKafkaRuntime<A, E, R>(
   effect: Effect.Effect<A, E, R>
@@ -25,8 +23,6 @@ export function provideKafkaRuntime(
     Effect.provide(KafkaConsumerService.Live),
     Effect.provide(KafkaProducerService.Live),
     Effect.provide(KafkaAdminService.Live),
-    Effect.provide(KafkaTelemetryService.Live),
-    Effect.provide(KafkaTelemetryExporter.Live),
     Effect.provide(KafkaClientFactory.Live),
     Effect.provide(configLayer as never)
   );

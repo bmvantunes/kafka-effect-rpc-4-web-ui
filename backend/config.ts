@@ -7,12 +7,6 @@ export type { KafkaAdminServiceShape } from "./src/services/kafka-admin-service"
 export { KafkaClientFactory } from "./src/services/kafka-client-factory-service";
 export type { KafkaClientFactoryShape } from "./src/services/kafka-client-factory-service";
 
-export { KafkaTelemetryService } from "./src/services/kafka-telemetry-service";
-export type {
-  KafkaTelemetryServiceShape,
-  KafkaTelemetrySnapshot
-} from "./src/services/kafka-telemetry-service";
-
 export {
   KafkaConfigError,
   KafkaClientError,

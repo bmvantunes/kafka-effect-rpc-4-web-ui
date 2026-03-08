@@ -7,12 +7,9 @@ const knownKafkaEnv = new Set([
   "KAFKA_GROUP_ID",
   "KAFKA_CLIENT_ID",
   "KAFKA_PRODUCER_INTERVAL",
-  "KAFKA_METRICS_INTERVAL",
   "KAFKA_CONSUMER_RETRY_BASE",
   "KAFKA_CONSUMER_RETRY_MAX_RETRIES",
   "KAFKA_STRICT_ENV",
-  "KAFKA_TELEMETRY_EXPORTER",
-  "KAFKA_TELEMETRY_EXPORT_PATH",
   "KAFKA_RPC_WS_PORT",
   "KAFKA_RPC_WS_PATH"
 ]);
@@ -31,9 +28,6 @@ const RuntimeConfig = Config.all({
   producerInterval: Config.duration("KAFKA_PRODUCER_INTERVAL").pipe(
     Config.withDefault(Duration.seconds(1))
   ),
-  metricsInterval: Config.duration("KAFKA_METRICS_INTERVAL").pipe(
-    Config.withDefault(Duration.seconds(15))
-  ),
   consumerRetryBase: Config.duration("KAFKA_CONSUMER_RETRY_BASE").pipe(
     Config.withDefault(Duration.millis(250))
   ),
@@ -41,10 +35,6 @@ const RuntimeConfig = Config.all({
     Config.withDefault(10)
   ),
   strictEnv: Config.boolean("KAFKA_STRICT_ENV").pipe(Config.withDefault(true)),
-  telemetryExporter: Config.string("KAFKA_TELEMETRY_EXPORTER").pipe(Config.withDefault("console")),
-  telemetryExportPath: Config.string("KAFKA_TELEMETRY_EXPORT_PATH").pipe(
-    Config.withDefault("./telemetry/kafka-metrics.ndjson")
-  ),
   rpcWsPort: Config.int("KAFKA_RPC_WS_PORT").pipe(Config.withDefault(3001)),
   rpcWsPath: Config.string("KAFKA_RPC_WS_PATH").pipe(Config.withDefault("/ws"))
 });
@@ -55,12 +45,9 @@ export interface KafkaConfigShape {
   readonly groupId: string;
   readonly clientId: string;
   readonly producerInterval: Duration.Duration;
-  readonly metricsInterval: Duration.Duration;
   readonly consumerRetryBase: Duration.Duration;
   readonly consumerRetryMaxRetries: number;
   readonly strictEnv: boolean;
-  readonly telemetryExporter: "console" | "ndjson";
-  readonly telemetryExportPath: string;
   readonly rpcWsPort: number;
   readonly rpcWsPath: string;
 }
@@ -71,12 +58,9 @@ export const redactConfig = (config: KafkaConfigShape) => ({
   groupId: config.groupId,
   clientId: config.clientId,
   producerInterval: config.producerInterval,
-  metricsInterval: config.metricsInterval,
   consumerRetryBase: config.consumerRetryBase,
   consumerRetryMaxRetries: config.consumerRetryMaxRetries,
   strictEnv: config.strictEnv,
-  telemetryExporter: config.telemetryExporter,
-  telemetryExportPath: config.telemetryExportPath,
   rpcWsPort: config.rpcWsPort,
   rpcWsPath: config.rpcWsPath
 });
@@ -152,17 +136,6 @@ export class KafkaConfig extends ServiceMap.Service<KafkaConfig, KafkaConfigShap
           );
         }
 
-        if (config.telemetryExporter !== "console" && config.telemetryExporter !== "ndjson") {
-          return Effect.fail(
-            new KafkaConfigError({
-              category: "domain",
-              reason: "InvalidConfig",
-              message: "KAFKA_TELEMETRY_EXPORTER must be 'console' or 'ndjson'",
-              field: "KAFKA_TELEMETRY_EXPORTER"
-            })
-          );
-        }
-
         if (config.rpcWsPort < 1 || config.rpcWsPort > 65535) {
           return Effect.fail(
             new KafkaConfigError({
@@ -187,8 +160,7 @@ export class KafkaConfig extends ServiceMap.Service<KafkaConfig, KafkaConfigShap
 
         const normalized = {
           ...config,
-          brokers,
-          telemetryExporter: config.telemetryExporter as "console" | "ndjson"
+          brokers
         } satisfies KafkaConfigShape;
 
         return validateEnvGovernance(normalized.strictEnv).pipe(Effect.as(normalized));

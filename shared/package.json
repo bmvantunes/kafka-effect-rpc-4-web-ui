@@ -1,0 +1,5 @@
+{
+  "name": "@pulse/shared",
+  "private": true,
+  "type": "module"
+}

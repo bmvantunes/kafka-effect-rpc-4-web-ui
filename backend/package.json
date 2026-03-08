@@ -6,11 +6,7 @@
     "start:producer": "KAFKA_BROKERS=localhost:9092 KAFKA_GROUP_ID=my-group tsx producer.ts",
     "start:consumer": "KAFKA_BROKERS=localhost:9092 KAFKA_GROUP_ID=my-group tsx consumer.ts",
     "start:redpanda": "docker compose up -d",
-    "stop:redpanda": "docker compose down",
-    "test:integration": "vitest run",
-    "test:faults": "tsx scripts/fault-injection.ts",
-    "test:enterprise": "npm run test:faults && npm run test:integration",
-    "test:smoke": "tsx scripts/heartbeat-smoke.ts"
+    "stop:redpanda": "docker compose down"
   },
   "dependencies": {
     "@effect/platform-node": "4.0.0-beta.27",
@@ -19,14 +15,9 @@
     "effect": "4.0.0-beta.27"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4.2.1",
     "@types/node": "^22.0.0",
-    "@vitest/browser-playwright": "^4.0.18",
-    "playwright": "^1.58.2",
-    "tailwindcss": "^4.2.1",
     "tsx": "^4.19.0",
-    "typescript": "^5.6.0",
-    "vitest": "^4.0.18"
+    "typescript": "^5.6.0"
   },
   "overrides": {
     "@effect/platform-node": {
