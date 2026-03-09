@@ -7,7 +7,7 @@ export interface KafkaProducerServiceShape {
     topic: string,
     key: string,
     sequence: number,
-    payload: string
+    payload: string | null
   ) => Effect.Effect<void, KafkaProducerError>;
 }
 

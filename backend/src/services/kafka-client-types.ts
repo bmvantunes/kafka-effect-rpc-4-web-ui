@@ -19,7 +19,7 @@ export interface KafkaAdminClient {
 export interface KafkaProducerClient {
   send(input: {
     acks: number;
-    messages: Array<{ topic: string; key: string; value: string }>;
+    messages: Array<{ topic: string; key: string; value: string | null }>;
   }): Promise<unknown>;
   close(): Promise<void>;
 }

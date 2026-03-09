@@ -214,7 +214,14 @@ export class KafkaClientFactory extends ServiceMap.Service<KafkaClientFactory, K
         producer: producer.pipe(
           Effect.map(
             (platformaticProducer): KafkaProducerClient => ({
-              send: (input) => platformaticProducer.send(input),
+              send: (input) =>
+                platformaticProducer.send({
+                  ...input,
+                  messages: input.messages.map((message) => ({
+                    ...message,
+                    value: message.value ?? undefined
+                  }))
+                }),
               close: () => platformaticProducer.close()
             })
           )

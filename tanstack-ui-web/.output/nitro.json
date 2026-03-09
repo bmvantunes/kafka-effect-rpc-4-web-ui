@@ -1,0 +1,17 @@
+{
+  "date": "2026-03-09T00:56:21.109Z",
+  "preset": "node-server",
+  "framework": {
+    "name": "nitro",
+    "version": "3.0.1-20260227-181935-bfbb207c"
+  },
+  "versions": {
+    "nitro": "3.0.1-20260227-181935-bfbb207c"
+  },
+  "serverEntry": "server/index.mjs",
+  "publicDir": "public",
+  "commands": {
+    "preview": "node ./server/index.mjs"
+  },
+  "config": {}
+}
